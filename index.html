@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+        .container { max-width: 600px; }
+        img { width: 300px; margin-bottom: 20px; display: block; border-radius: 8px; }
+        .info-row { border-bottom: 1px solid #ccc; padding: 10px 0; margin-bottom: 10px; }
+        .label { font-weight: bold; display: block; color: #555; }
+        .value { font-weight: bold; font-size: 1.1em; display: block; }
+        input { font-size: 1em; padding: 5px; width: 100%; box-sizing: border-box; display: none; margin-top: 5px; }
+        button { margin-top: 20px; padding: 10px 20px; cursor: pointer; border-radius: 5px; border: 1px solid #ccc; background: #f8f8f8; font-size: 14px; }
+        button:hover { background: #eee; }
+        #save-btn { display: none; background: #d4edda; border-color: #c3e6cb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>User Profile</h1>
+        <img src="/profile-picture" alt="Profile Picture">
+
+        <div class="info-row">
+            <span class="label">Name:</span>
+            <span id="name-display" class="value">Anna Smith</span>
+            <input type="text" id="name-input">
+        </div>
+
+        <div class="info-row">
+            <span class="label">Email:</span>
+            <span id="email-display" class="value">anna.smith@example.com</span>
+            <input type="text" id="email-input">
+        </div>
+
+        <div class="info-row">
+            <span class="label">Interests:</span>
+            <span id="interests-display" class="value">coding</span>
+            <input type="text" id="interests-input">
+        </div>
+
+        <button id="edit-btn" onclick="toggleEdit()">Edit Profile</button>
+        <button id="save-btn" onclick="saveProfile()">Save Profile</button>
+    </div>
+
+    <script>
+        async function loadProfile() {
+            const res = await fetch('/get-profile');
+            const data = await res.json();
+            
+            // If data exists in DB, update the UI
+            if (data.name) {
+                document.getElementById('name-display').innerText = data.name;
+                document.getElementById('email-display').innerText = data.email;
+                document.getElementById('interests-display').innerText = data.interests;
+                
+                document.getElementById('name-input').value = data.name;
+                document.getElementById('email-input').value = data.email;
+                document.getElementById('interests-input').value = data.interests;
+            }
+        }
+
+        function toggleEdit() {
+            const nameInput = document.getElementById('name-input');
+            const isEditing = nameInput.style.display === 'block';
+            
+            const displays = ['name-display', 'email-display', 'interests-display'];
+            const inputs = ['name-input', 'email-input', 'interests-input'];
+            
+            // Switch between labels and text boxes
+            displays.forEach(id => document.getElementById(id).style.display = isEditing ? 'block' : 'none');
+            inputs.forEach(id => document.getElementById(id).style.display = isEditing ? 'none' : 'block');
+            
+            // Switch buttons
+            document.getElementById('edit-btn').style.display = isEditing ? 'inline-block' : 'none';
+            document.getElementById('save-btn').style.display = isEditing ? 'none' : 'inline-block';
+        }
+
+        async function saveProfile() {
+            const updatedData = {
+                name: document.getElementById('name-input').value,
+                email: document.getElementById('email-input').value,
+                interests: document.getElementById('interests-input').value
+            };
+
+            await fetch('/update-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedData)
+            });
+
+            toggleEdit(); // Close edit mode
+            loadProfile(); // Refresh the data
+        }
+
+        window.onload = loadProfile;
+    </script>
+</body>
+</html>
