@@ -9,7 +9,7 @@ app.use(express.json());
 app.use(express.static(__dirname)); 
 
 // --- DATABASE CONFIGURATION ---
-const mongoUrlLocal = "mongodb://admin:password@mongodb:27017/user-acc?authSource=admin";
+const mongoUrlLocal = process.env.MONGO_URL || "mongodb://admin:password@mongodb:27017/user-acc?authSource=admin";
 const databaseName = "user-account";
 
 // 1. Serve the HTML file
