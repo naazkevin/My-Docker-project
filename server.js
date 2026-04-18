@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { MongoClient } = require('mongodb');
 const app = express();
+const version = process.env.VERSION || "unknown";
 
 // Middleware
 app.use(express.json());
@@ -78,7 +79,10 @@ app.get('/get-profile', async (req, res) => {
 app.get('/health', (req, res) => {
     res.status(200).send("OK");
 });
-
+// 6. Version Check (IMPORTANT for DevOps)
+app.get('/version', (req, res) => {
+    res.send(`Running version: ${version}`);
+});
 
 app.listen(port, () => {
     console.log(`🚀 Server spinning at port ${port}`);
