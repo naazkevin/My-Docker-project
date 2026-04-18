@@ -19,7 +19,7 @@ const port = process.env.PORT || 3000;
 
 // 1. Serve HTML
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, "index.html"));
+    res.send("BROKEN VERSION 💥");
 });
 
 // 2. Serve Image
