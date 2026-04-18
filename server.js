@@ -4,72 +4,76 @@ const fs = require('fs');
 const { MongoClient } = require('mongodb');
 const app = express();
 
-// Middleware to handle data
+// Middleware
 app.use(express.json());
 app.use(express.static(__dirname)); 
 
 // --- DATABASE CONFIGURATION ---
-const mongoUrlLocal = process.env.MONGO_URL || "mongodb://admin:password@mongodb:27017/user-acc?authSource=admin";
+// Render-la MONGO_URL variable kuduthuruppom, adhu illana local docker path edukkum
+const mongoUrl = process.env.MONGO_URL || "mongodb://admin:password@mongodb:27017/user-acc?authSource=admin";
 const databaseName = "user-account";
 
-// 1. Serve the HTML file
+// Port-ah dynamic-ah mathinomna Render-ku innum vasadhiya irukkum
+const port = process.env.PORT || 3000;
+
+// 1. Serve HTML
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// 2. Serve the Image (Your specific logic)
+// 2. Serve Image
 app.get('/profile-picture', (req, res) => {
     let imgPath = path.join(__dirname, "profile-1.jpg");
     if (fs.existsSync(imgPath)) {
         res.sendFile(imgPath);
     } else {
-        console.error("❌ Image not found at:", imgPath);
         res.status(404).send("Image not found");
     }
 });
 
-// 3. Save Data to MongoDB (Modern Async Version)
+// 3. Update Profile (Handles Name, Email, Interests, Location, and Hobbies)
 app.post('/update-profile', async (req, res) => {
     const userObj = req.body;
-    userObj['userid'] = 1;
+    userObj['userid'] = 1; // Always updating the same user for this demo
     let client;
 
     try {
-        client = await MongoClient.connect(mongoUrlLocal);
+        client = await MongoClient.connect(mongoUrl);
         const db = client.db(databaseName);
         
+        // Inga namma req.body-la enna anuppunaalum adhu database-la update aagidum
         await db.collection("user").updateOne(
             { userid: 1 }, 
             { $set: userObj }, 
             { upsert: true }
         );
         
-        console.log("✅ Database updated successfully!");
+        console.log("✅ Profile updated in MongoDB Atlas!");
         res.send(userObj); 
     } catch (err) {
-        console.error("❌ DB Error:", err.message);
+        console.error("❌ DB Update Error:", err.message);
         res.status(500).send("Database failure"); 
     } finally {
         if (client) client.close();
     }
 });
 
-// 4. Get Data from MongoDB
+// 4. Get Profile
 app.get('/get-profile', async (req, res) => {
     let client;
     try {
-        client = await MongoClient.connect(mongoUrlLocal);
+        client = await MongoClient.connect(mongoUrl);
         const db = client.db(databaseName);
         const result = await db.collection("user").findOne({ userid: 1 });
         res.send(result || {});
     } catch (err) {
-        console.error("❌ Fetch Error:", err.message);
+        console.error("❌ DB Fetch Error:", err.message);
         res.status(500).send({});
     } finally {
         if (client) client.close();
     }
 });
 
-app.listen(3000, () => {
-    console.log("🚀 Server spinning at http://localhost:3000");
-})
+app.listen(port, () => {
+    console.log(`🚀 Server spinning at port ${port}`);
+});

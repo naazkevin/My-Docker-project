@@ -3,23 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Profile</title>
+    <title>DevOps Master Portal</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
-        .container { max-width: 600px; }
-        img { width: 300px; margin-bottom: 20px; display: block; border-radius: 8px; }
-        .info-row { border-bottom: 1px solid #ccc; padding: 10px 0; margin-bottom: 10px; }
-        .label { font-weight: bold; display: block; color: #555; }
-        .value { font-weight: bold; font-size: 1.1em; display: block; }
-        input { font-size: 1em; padding: 5px; width: 100%; box-sizing: border-box; display: none; margin-top: 5px; }
-        button { margin-top: 20px; padding: 10px 20px; cursor: pointer; border-radius: 5px; border: 1px solid #ccc; background: #f8f8f8; font-size: 14px; }
-        button:hover { background: #eee; }
-        #save-btn { display: none; background: #d4edda; border-color: #c3e6cb; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        img { width: 150px; height: 150px; margin: 0 auto 20px; display: block; border-radius: 50%; border: 4px solid #3498db; object-fit: cover; }
+        .info-row { padding: 12px 0; border-bottom: 1px solid #eee; }
+        .label { font-size: 0.85em; text-transform: uppercase; color: #7f8c8d; letter-spacing: 1px; }
+        .value { font-weight: 600; font-size: 1.1em; color: #34495e; display: block; margin-top: 4px; }
+        input { font-size: 1em; padding: 8px; width: 100%; box-sizing: border-box; display: none; margin-top: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .btn-group { display: flex; gap: 10px; justify-content: center; margin-top: 25px; }
+        button { padding: 10px 25px; cursor: pointer; border-radius: 6px; border: none; font-weight: bold; transition: 0.3s; }
+        #edit-btn { background: #3498db; color: white; }
+        #edit-btn:hover { background: #2980b9; }
+        #save-btn { display: none; background: #27ae60; color: white; }
+        #save-btn:hover { background: #219150; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>User Profile</h1>
+        <h1>Macha's DevOps Portal 🚀</h1>
         <img src="/profile-picture" alt="Profile Picture">
 
         <div class="info-row">
@@ -40,24 +44,38 @@
             <input type="text" id="interests-input">
         </div>
 
-        <button id="edit-btn" onclick="toggleEdit()">Edit Profile</button>
-        <button id="save-btn" onclick="saveProfile()">Save Profile</button>
+        <div class="info-row">
+            <span class="label">Location:</span>
+            <span id="location-display" class="value">Tamil Nadu, India</span>
+            <input type="text" id="location-input" placeholder="Enter your city">
+        </div>
+
+        <div class="info-row">
+            <span class="label">Hobbies:</span>
+            <span id="hobbies-display" class="value">Learning DevOps</span>
+            <input type="text" id="hobbies-input" placeholder="What do you do for fun?">
+        </div>
+
+        <div class="btn-group">
+            <button id="edit-btn" onclick="toggleEdit()">Edit Profile</button>
+            <button id="save-btn" onclick="saveProfile()">Save Changes ✅</button>
+        </div>
     </div>
 
     <script>
+        const fields = ['name', 'email', 'interests', 'location', 'hobbies'];
+
         async function loadProfile() {
             const res = await fetch('/get-profile');
             const data = await res.json();
             
-            // If data exists in DB, update the UI
             if (data.name) {
-                document.getElementById('name-display').innerText = data.name;
-                document.getElementById('email-display').innerText = data.email;
-                document.getElementById('interests-display').innerText = data.interests;
-                
-                document.getElementById('name-input').value = data.name;
-                document.getElementById('email-input').value = data.email;
-                document.getElementById('interests-input').value = data.interests;
+                fields.forEach(field => {
+                    if(data[field]) {
+                        document.getElementById(`${field}-display`).innerText = data[field];
+                        document.getElementById(`${field}-input`).value = data[field];
+                    }
+                });
             }
         }
 
@@ -65,24 +83,20 @@
             const nameInput = document.getElementById('name-input');
             const isEditing = nameInput.style.display === 'block';
             
-            const displays = ['name-display', 'email-display', 'interests-display'];
-            const inputs = ['name-input', 'email-input', 'interests-input'];
+            fields.forEach(field => {
+                document.getElementById(`${field}-display`).style.display = isEditing ? 'block' : 'none';
+                document.getElementById(`${field}-input`).style.display = isEditing ? 'none' : 'block';
+            });
             
-            // Switch between labels and text boxes
-            displays.forEach(id => document.getElementById(id).style.display = isEditing ? 'block' : 'none');
-            inputs.forEach(id => document.getElementById(id).style.display = isEditing ? 'none' : 'block');
-            
-            // Switch buttons
             document.getElementById('edit-btn').style.display = isEditing ? 'inline-block' : 'none';
             document.getElementById('save-btn').style.display = isEditing ? 'none' : 'inline-block';
         }
 
         async function saveProfile() {
-            const updatedData = {
-                name: document.getElementById('name-input').value,
-                email: document.getElementById('email-input').value,
-                interests: document.getElementById('interests-input').value
-            };
+            const updatedData = {};
+            fields.forEach(field => {
+                updatedData[field] = document.getElementById(`${field}-input`).value;
+            });
 
             await fetch('/update-profile', {
                 method: 'POST',
@@ -90,8 +104,8 @@
                 body: JSON.stringify(updatedData)
             });
 
-            toggleEdit(); // Close edit mode
-            loadProfile(); // Refresh the data
+            toggleEdit();
+            loadProfile();
         }
 
         window.onload = loadProfile;
