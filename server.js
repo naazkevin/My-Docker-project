@@ -74,6 +74,12 @@ app.get('/get-profile', async (req, res) => {
     }
 });
 
+// 5. Health Check
+app.get('/health', (req, res) => {
+    res.status(200).send("OK");
+});
+
+
 app.listen(port, () => {
     console.log(`🚀 Server spinning at port ${port}`);
 });

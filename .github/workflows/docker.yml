@@ -1,10 +1,12 @@
-name: Build & Push Node App
+name: Build, Push & Deploy
 
 on:
   push:
+    branches:
+      - main
 
 jobs:
-  docker-build:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -14,16 +16,13 @@ jobs:
       - name: Login to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      - name: Build Docker Image
+      - name: Build Image
         run: |
-          echo "Building version ${{ github.run_number }}"
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:latest \
-                       -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.run_number }} .
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }} .
 
-      - name: Push Docker Images
+      - name: Push Image
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:latest
-          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.run_number }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }}
 
-      - name: Show Deployment Version
-        run: echo "Built and pushed version ${{ github.run_number }}"
+      - name: Trigger Render Deploy
+        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
