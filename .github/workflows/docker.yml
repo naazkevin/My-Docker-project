@@ -18,10 +18,12 @@ jobs:
 
       - name: Build Image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }} .
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:latest \
+                 -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }} .
 
       - name: Push Image
         run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/node-app:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }}
 
       - name: Trigger Render Deploy
