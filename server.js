@@ -15,11 +15,11 @@ const mongoUrl = process.env.MONGO_URL || "mongodb://admin:password@mongodb:2701
 const databaseName = "user-account";
 
 // Port-ah dynamic-ah mathinomna Render-ku innum vasadhiya irukkum
-const port = process.env.PORT || 9000;
+const port = process.env.PORT || 3000;
 
 // 1. Serve HTML
 app.get('/', (req, res) => {
-    res.send("BROKEN VERSION 💥");
+    res.sendFile(path.join(__dirname, "index.html"));
 });
 
 // 2. Serve Image
@@ -84,6 +84,6 @@ app.get('/version', (req, res) => {
     res.send(`Running version: ${version}`);
 });
 
-app.listen(port, () => {
+app.listen(3000, () => {
     console.log(`🚀 Server spinning at port ${port}`);
 });
