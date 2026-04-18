@@ -28,4 +28,6 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/node-app:latest
 
       - name: Trigger Render Deploy
-        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+        run: |
+          echo "Triggering deploy..."
+          curl -v -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
