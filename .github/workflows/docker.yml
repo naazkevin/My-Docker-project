@@ -14,15 +14,16 @@ jobs:
       - name: Login to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      - name: Build Image
+      - name: Build Docker Image
         run: |
+          echo "Building version ${{ github.run_number }}"
           docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:latest \
                        -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.run_number }} .
 
-      - name: Push Image
+      - name: Push Docker Images
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/node-app:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.run_number }}
-          
-      - name: Trigger Render Deploy
-        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+
+      - name: Show Deployment Version
+        run: echo "Built and pushed version ${{ github.run_number }}"
