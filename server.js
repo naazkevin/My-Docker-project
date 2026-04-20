@@ -5,6 +5,8 @@ const { MongoClient } = require('mongodb');
 const app = express();
 const version = process.env.VERSION || "unknown";
 
+throw new Error("CRASH 💥");
+
 // Middleware
 app.use(express.json());
 app.use(express.static(__dirname)); 
