@@ -33,16 +33,23 @@ jobs:
           curl -v -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
 
       - name: Wait for deployment
-        run: sleep 40
+        run: sleep 10
 
       - name: Health Check
         run: |
-          echo "Checking health..."
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://node-app-latest-ou2v.onrender.com/health)
+          echo "Checking health multiple times..."
 
-          if [ "$STATUS" -ne 200 ]; then
-            echo "Health check failed! Rolling back..."
-            exit 1
-          else
-            echo "Health check passed!"
-          fi
+          for i in 1 2 3 4 5
+          do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://node-app-latest-ou2v.onrender.com/health)
+
+            if [ "$STATUS" -ne 200 ]; then
+              echo "Health check failed at attempt $i"
+              exit 1
+            fi
+
+            echo "Attempt $i is passed"
+            sleep 5
+          done
+          
+          echo "App is stable"
