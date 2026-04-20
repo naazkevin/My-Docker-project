@@ -26,7 +26,7 @@ let isHealthy = true;
 setTimeout(() => {
     console.log("❌ Simulating unhealthy state...");
     isHealthy = false;
-}, 15000);
+}, 30000);   // <-- change to 30 seconds
 
 // 1. Serve HTML
 app.get('/', (req, res) => {
