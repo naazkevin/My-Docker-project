@@ -8,25 +8,28 @@ const version = process.env.VERSION || "unknown";
 
 // Middleware
 app.use(express.json());
-app.use(express.static(__dirname)); 
+app.use(express.static(__dirname));
 
 // --- DATABASE CONFIGURATION ---
-const mongoUrl = "mongodb://wrong:wrong@invalid:27017/test";
+const mongoUrl = process.env.MONGO_URL || "mongodb://admin:password@mongodb:27017/user-acc?authSource=admin";
 const databaseName = "user-account";
+
+let dbClient;
+
+// Connect once (IMPORTANT for real apps)
+async function connectDB() {
+    try {
+        dbClient = new MongoClient(mongoUrl);
+        await dbClient.connect();
+        console.log("✅ Connected to MongoDB");
+    } catch (err) {
+        console.error("❌ DB Connection Failed:", err.message);
+    }
+}
+connectDB();
 
 // Port
 const port = process.env.PORT || 3000;
-
-/*
-🔥 HEALTH SIMULATION (IMPORTANT)
-App will become unhealthy after 15 seconds
-*/
-let isHealthy = true;
-
-setTimeout(() => {
-    console.log("❌ Simulating unhealthy state...");
-    isHealthy = false;
-}, 30000);   // <-- change to 30 seconds
 
 // 1. Serve HTML
 app.get('/', (req, res) => {
@@ -46,66 +49,51 @@ app.get('/profile-picture', (req, res) => {
 // 3. Update Profile
 app.post('/update-profile', async (req, res) => {
     const userObj = req.body;
-    userObj['userid'] = 1;
-    let client;
+    userObj.userid = 1;
 
     try {
-        client = await MongoClient.connect(mongoUrl);
-        const db = client.db(databaseName);
+        const db = dbClient.db(databaseName);
 
         await db.collection("user").updateOne(
-            { userid: 1 }, 
-            { $set: userObj }, 
+            { userid: 1 },
+            { $set: userObj },
             { upsert: true }
         );
 
-        console.log("✅ Profile updated in MongoDB!");
         res.send(userObj);
-
     } catch (err) {
         console.error("❌ DB Update Error:", err.message);
         res.status(500).send("Database failure");
-    } finally {
-        if (client) client.close();
     }
 });
 
 // 4. Get Profile
 app.get('/get-profile', async (req, res) => {
-    let client;
-
     try {
-        client = await MongoClient.connect(mongoUrl);
-        const db = client.db(databaseName);
-
+        const db = dbClient.db(databaseName);
         const result = await db.collection("user").findOne({ userid: 1 });
-        res.send(result || {});
 
+        res.send(result || {});
     } catch (err) {
         console.error("❌ DB Fetch Error:", err.message);
         res.status(500).send({});
-    } finally {
-        if (client) client.close();
     }
 });
 
-// 5. Health Check (UPDATED)
+// ✅ REAL Health Check (THIS is the key fix)
 app.get('/health', async (req, res) => {
-    let client;
     try {
-        client = await MongoClient.connect(mongoUrl, { serverSelectionTimeoutMS: 3000 });
-        await client.db("admin").command({ ping: 1 });
+        const db = dbClient.db(databaseName);
+        await db.command({ ping: 1 });
 
         res.status(200).send("OK");
     } catch (err) {
-        console.error("Health check DB failed ❌");
-        res.status(500).send("DB DOWN");
-    } finally {
-        if (client) client.close();
+        console.error("❌ Health check DB failed");
+        res.status(500).send("NOT OK");
     }
 });
 
-// 6. Version Check
+// Version endpoint
 app.get('/version', (req, res) => {
     res.send(`Running version: ${version}`);
 });

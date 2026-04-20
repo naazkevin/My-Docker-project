@@ -28,24 +28,26 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }}
           docker push ${{ secrets.DOCKER_USERNAME }}/node-app:latest
 
-      # ✅ Save currently running version (for rollback)
+      # ✅ Save previous version
       - name: Save previous version
         run: |
           PREV_VERSION=$(curl -s https://node-app-latest-ou2v.onrender.com/version | awk '{print $3}')
           echo "PREV_VERSION=$PREV_VERSION" >> $GITHUB_ENV
           echo "Previous version: $PREV_VERSION"
 
-      # ✅ Deploy NEW SHA (ONLY this, no webhook)
+      # ✅ Deploy NEW version (FIXED API)
       - name: Deploy using SHA image
         run: |
           echo "Deploying new version..."
 
-          curl -X PATCH https://node-app-latest-ou2v.onrender.com/srv-d7irio67r5hc73cdmkag \
+          IMAGE="docker.io/${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }}"
+
+          curl -X PATCH https://api.render.com/v1/services/srv-d7irio67r5hc73cdmkag \
             -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
             -H "Content-Type: application/json" \
-            --data-raw "{\"image\":\"docker.io/${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }}\"}"
+            -d "{\"image\":\"$IMAGE\"}"
 
-      # ✅ Wait until NEW version is live
+      # ✅ Wait for new version
       - name: Wait for new version to go live
         run: |
           echo "Waiting for new version..."
@@ -61,11 +63,10 @@ jobs:
               break
             fi
 
-            echo "Still old version... retrying"
             sleep 5
           done
 
-      # ✅ HEALTH CHECK + AUTO ROLLBACK
+      # ✅ REAL HEALTH CHECK + ROLLBACK
       - name: Health Check & Auto Rollback
         run: |
           echo "Checking health..."
@@ -75,10 +76,12 @@ jobs:
           if [ "$STATUS" -ne 200 ]; then
             echo "Health check failed! Rolling back..."
 
+            IMAGE="docker.io/${{ secrets.DOCKER_USERNAME }}/node-app:${PREV_VERSION}"
+
             curl -X PATCH https://api.render.com/v1/services/srv-d7irio67r5hc73cdmkag \
               -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
               -H "Content-Type: application/json" \
-              --data-raw "{\"image\":\"docker.io/${{ secrets.DOCKER_USERNAME }}/node-app:${PREV_VERSION}\"}"
+              -d "{\"image\":\"$IMAGE\"}"
 
             echo "Rollback triggered to version: $PREV_VERSION"
             exit 1
