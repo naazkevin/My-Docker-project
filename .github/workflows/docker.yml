@@ -33,6 +33,17 @@ jobs:
           echo "Triggering deploy..."
           curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
 
+      - name: Trigger Render Deploy with new image
+        run: |
+          echo "Triggering deploy with SHA..."
+
+          curl -X PATCH https://node-app-latest-ou2v.onrender.com/srv-d7irio67r5hc73cdmkag \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "image": "docker.io/${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }}"
+            }'
+
       # 🔥 CRITICAL STEP (this is what you were missing)
       - name: Wait for new version to go live
         run: |
