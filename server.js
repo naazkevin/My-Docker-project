@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const { MongoClient } = require('mongodb');
+
 const app = express();
 const version = process.env.VERSION || "unknown";
 
@@ -10,15 +11,21 @@ app.use(express.json());
 app.use(express.static(__dirname)); 
 
 // --- DATABASE CONFIGURATION ---
-// Render-la MONGO_URL variable kuduthuruppom, adhu illana local docker path edukkum
 const mongoUrl = process.env.MONGO_URL || "mongodb://admin:password@mongodb:27017/user-acc?authSource=admin";
 const databaseName = "user-account";
 
-// Port-ah dynamic-ah mathinomna Render-ku innum vasadhiya irukkum
+// Port
 const port = process.env.PORT || 3000;
 
+/*
+🔥 HEALTH SIMULATION (IMPORTANT)
+App will become unhealthy after 15 seconds
+*/
+let isHealthy = true;
+
 setTimeout(() => {
-    throw new Error("Crash after deploy 💥");
+    console.log("❌ Simulating unhealthy state...");
+    isHealthy = false;
 }, 15000);
 
 // 1. Serve HTML
@@ -36,28 +43,28 @@ app.get('/profile-picture', (req, res) => {
     }
 });
 
-// 3. Update Profile (Handles Name, Email, Interests, Location, and Hobbies)
+// 3. Update Profile
 app.post('/update-profile', async (req, res) => {
     const userObj = req.body;
-    userObj['userid'] = 1; // Always updating the same user for this demo
+    userObj['userid'] = 1;
     let client;
 
     try {
         client = await MongoClient.connect(mongoUrl);
         const db = client.db(databaseName);
-        
-        // Inga namma req.body-la enna anuppunaalum adhu database-la update aagidum
+
         await db.collection("user").updateOne(
             { userid: 1 }, 
             { $set: userObj }, 
             { upsert: true }
         );
-        
-        console.log("✅ Profile updated in MongoDB Atlas!");
-        res.send(userObj); 
+
+        console.log("✅ Profile updated in MongoDB!");
+        res.send(userObj);
+
     } catch (err) {
         console.error("❌ DB Update Error:", err.message);
-        res.status(500).send("Database failure"); 
+        res.status(500).send("Database failure");
     } finally {
         if (client) client.close();
     }
@@ -66,11 +73,14 @@ app.post('/update-profile', async (req, res) => {
 // 4. Get Profile
 app.get('/get-profile', async (req, res) => {
     let client;
+
     try {
         client = await MongoClient.connect(mongoUrl);
         const db = client.db(databaseName);
+
         const result = await db.collection("user").findOne({ userid: 1 });
         res.send(result || {});
+
     } catch (err) {
         console.error("❌ DB Fetch Error:", err.message);
         res.status(500).send({});
@@ -79,15 +89,20 @@ app.get('/get-profile', async (req, res) => {
     }
 });
 
-// 5. Health Check
+// 5. Health Check (UPDATED)
 app.get('/health', (req, res) => {
-    res.status(200).send("OK");
+    if (isHealthy) {
+        res.status(200).send("OK");
+    } else {
+        res.status(500).send("NOT OK");
+    }
 });
-// 6. Version Check (IMPORTANT for DevOps)
+
+// 6. Version Check
 app.get('/version', (req, res) => {
     res.send(`Running version: ${version}`);
 });
 
 app.listen(port, () => {
-    console.log(`🚀 Server spinning at port ${port}`);
+    console.log(`🚀 Server running on port ${port}`);
 });
