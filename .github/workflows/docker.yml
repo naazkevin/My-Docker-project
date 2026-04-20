@@ -28,62 +28,58 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }}
           docker push ${{ secrets.DOCKER_USERNAME }}/node-app:latest
 
-      # ✅ Save previous version
+      # ✅ Save current running version
       - name: Save previous version
         run: |
           PREV_VERSION=$(curl -s https://node-app-latest-ou2v.onrender.com/version | awk '{print $3}')
           echo "PREV_VERSION=$PREV_VERSION" >> $GITHUB_ENV
           echo "Previous version: $PREV_VERSION"
 
-      # ✅ Deploy NEW version (FIXED API)
-      - name: Deploy using SHA image
+      # ✅ Deploy NEW version using Render API
+      - name: Deploy new version
         run: |
-          echo "Deploying new version..."
-
-          IMAGE="docker.io/${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }}"
-
           curl -X PATCH "https://api.render.com/v1/services/srv-d7irio67r5hc73cdmkag" \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            --data "{\"image\":\"$IMAGE\"}"
+          -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d "{\"image\":\"docker.io/${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }}\"}"
 
-      # ✅ Wait for new version
-      - name: Wait for new version to go live
+      # ✅ Wait until new version comes live
+      - name: Wait for new version
         run: |
           echo "Waiting for new version..."
 
           for i in {1..20}
           do
             VERSION=$(curl -s https://node-app-latest-ou2v.onrender.com/version)
-
             echo "Current: $VERSION"
 
             if [[ "$VERSION" == *"${{ github.sha }}"* ]]; then
               echo "New version is live!"
-              break
+              exit 0
             fi
 
             sleep 5
           done
 
-      # ✅ REAL HEALTH CHECK + ROLLBACK
-      - name: Health Check & Auto Rollback
+          echo "New version did NOT come live"
+          exit 1
+
+      # ✅ HEALTH CHECK + AUTO ROLLBACK
+      - name: Health Check & Rollback
         run: |
           echo "Checking health..."
 
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://node-app-latest-ou2v.onrender.com/health)
 
           if [ "$STATUS" -ne 200 ]; then
-            echo "Health check failed! Rolling back..."
-
-            IMAGE="docker.io/${{ secrets.DOCKER_USERNAME }}/node-app:${PREV_VERSION}"
+            echo "Health failed → Rolling back..."
 
             curl -X PATCH "https://api.render.com/v1/services/srv-d7irio67r5hc73cdmkag" \
-              -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-              -H "Content-Type: application/json" \
-              --data "{\"image\":\"$IMAGE\"}"
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"image\":\"docker.io/${{ secrets.DOCKER_USERNAME }}/node-app:${PREV_VERSION}\"}"
 
-            echo "Rollback triggered to version: $PREV_VERSION"
+            echo "Rollback done to: $PREV_VERSION"
             exit 1
           else
             echo "App is healthy ✅"
