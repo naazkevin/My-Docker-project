@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(express.static(__dirname)); 
 
 // --- DATABASE CONFIGURATION ---
-const mongoUrl = process.env.MONGO_URL || "mongodb://admin:password@mongodb:27017/user-acc?authSource=admin";
+const mongoUrl = "mongodb://wrong:wrong@invalid:27017/test";
 const databaseName = "user-account";
 
 // Port
@@ -90,11 +90,18 @@ app.get('/get-profile', async (req, res) => {
 });
 
 // 5. Health Check (UPDATED)
-app.get('/health', (req, res) => {
-    if (isHealthy) {
+app.get('/health', async (req, res) => {
+    let client;
+    try {
+        client = await MongoClient.connect(mongoUrl, { serverSelectionTimeoutMS: 3000 });
+        await client.db("admin").command({ ping: 1 });
+
         res.status(200).send("OK");
-    } else {
-        res.status(500).send("NOT OK");
+    } catch (err) {
+        console.error("Health check DB failed ❌");
+        res.status(500).send("DB DOWN");
+    } finally {
+        if (client) client.close();
     }
 });
 
