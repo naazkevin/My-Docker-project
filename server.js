@@ -84,6 +84,6 @@ app.get('/version', (req, res) => {
     res.send(`Running version: ${version}`);
 });
 
-app.listen(3000, () => {
+app.listen(port, () => {
     console.log(`🚀 Server spinning at port ${port}`);
 });
