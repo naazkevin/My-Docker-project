@@ -18,7 +18,8 @@ jobs:
 
       - name: Build Image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/node-app:latest \
+          docker build \
+          -t ${{ secrets.DOCKER_USERNAME }}/node-app:latest \
           -t ${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }} \
           --build-arg VERSION=${{ github.sha }} .
 
@@ -30,11 +31,29 @@ jobs:
       - name: Trigger Render Deploy
         run: |
           echo "Triggering deploy..."
-          curl -v -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
 
-      - name: Wait for deployment
-        run: sleep 10
+      # 🔥 CRITICAL STEP (this is what you were missing)
+      - name: Wait for new version to go live
+        run: |
+          echo "Waiting for new version..."
 
+          for i in {1..20}
+          do
+            VERSION=$(curl -s https://node-app-latest-ou2v.onrender.com/version)
+
+            echo "Current: $VERSION"
+
+            if [[ "$VERSION" == *"${{ github.sha }}"* ]]; then
+              echo "New version is live!"
+              break
+            fi
+
+            echo "Still old version... retrying"
+            sleep 5
+          done
+
+      # 🔥 REAL HEALTH CHECK
       - name: Health Check
         run: |
           echo "Checking health multiple times..."
@@ -48,8 +67,8 @@ jobs:
               exit 1
             fi
 
-            echo "Attempt $i is passed"
+            echo "Attempt $i passed"
             sleep 5
           done
-          
+
           echo "App is stable"
