@@ -17,6 +17,10 @@ const databaseName = "user-account";
 // Port-ah dynamic-ah mathinomna Render-ku innum vasadhiya irukkum
 const port = process.env.PORT || 3000;
 
+setTimeout(() => {
+    throw new Error("Crash after deploy 💥");
+}, 15000);
+
 // 1. Serve HTML
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, "index.html"));

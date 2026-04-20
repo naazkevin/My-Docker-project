@@ -31,3 +31,18 @@ jobs:
         run: |
           echo "Triggering deploy..."
           curl -v -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
+      - name: Wait for deployment
+        run: sleep 40
+
+      - name: Health Check
+        run: |
+          echo "Checking health..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://node-app-latest-ou2v.onrender.com/health)
+
+          if [ "$STATUS" -ne 200 ]; then
+            echo "Health check failed! Rolling back..."
+            exit 1
+          else
+            echo "Health check passed!"
+          fi
