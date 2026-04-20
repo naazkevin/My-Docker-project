@@ -28,23 +28,26 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }}
           docker push ${{ secrets.DOCKER_USERNAME }}/node-app:latest
 
-      - name: Trigger Render Deploy
+      # ✅ Save currently running version (for rollback)
+      - name: Save previous version
         run: |
-          echo "Triggering deploy..."
-          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+          PREV_VERSION=$(curl -s https://node-app-latest-ou2v.onrender.com/version | awk '{print $3}')
+          echo "PREV_VERSION=$PREV_VERSION" >> $GITHUB_ENV
+          echo "Previous version: $PREV_VERSION"
 
-      - name: Trigger Render Deploy with new image
+      # ✅ Deploy NEW SHA (ONLY this, no webhook)
+      - name: Deploy using SHA image
         run: |
-          echo "Triggering deploy with SHA..."
+          echo "Deploying new version..."
 
-          curl -X PATCH https://node-app-latest-ou2v.onrender.com/srv-d7irio67r5hc73cdmkag \
+          curl -X PATCH https://api.render.com/v1/services/srv-d7irio67r5hc73cdmkag \
             -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
             -H "Content-Type: application/json" \
-            -d '{
-              "image": "docker.io/${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }}"
-            }'
+            -d "{
+              \"image\": \"docker.io/${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }}\"
+            }"
 
-      # 🔥 CRITICAL STEP (this is what you were missing)
+      # ✅ Wait until NEW version is live
       - name: Wait for new version to go live
         run: |
           echo "Waiting for new version..."
@@ -64,22 +67,25 @@ jobs:
             sleep 5
           done
 
-      # 🔥 REAL HEALTH CHECK
-      - name: Health Check
+      # ✅ HEALTH CHECK + AUTO ROLLBACK
+      - name: Health Check & Auto Rollback
         run: |
-          echo "Checking health multiple times..."
+          echo "Checking health..."
 
-          for i in 1 2 3 4 5
-          do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://node-app-latest-ou2v.onrender.com/health)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://node-app-latest-ou2v.onrender.com/health)
 
-            if [ "$STATUS" -ne 200 ]; then
-              echo "Health check failed at attempt $i"
-              exit 1
-            fi
+          if [ "$STATUS" -ne 200 ]; then
+            echo "Health check failed! Rolling back..."
 
-            echo "Attempt $i passed"
-            sleep 5
-          done
+            curl -X PATCH https://api.render.com/v1/services/srv-d7irio67r5hc73cdmkag \
+              -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"image\": \"docker.io/${{ secrets.DOCKER_USERNAME }}/node-app:${PREV_VERSION}\"
+              }"
 
-          echo "App is stable"
+            echo "Rollback triggered to version: $PREV_VERSION"
+            exit 1
+          else
+            echo "App is healthy ✅"
+          fi
