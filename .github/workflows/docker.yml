@@ -42,7 +42,7 @@ jobs:
 
           IMAGE="docker.io/${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }}"
 
-          curl -X PATCH https://node-app-latest-ou2v.onrender.com/srv-d7irio67r5hc73cdmkag \
+          curl -X PATCH https://node-app-latest-ou2v.onrender.com/services/srv-d7irio67r5hc73cdmkag \
             -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
             -H "Content-Type: application/json" \
             --data "{\"image\":\"$IMAGE\"}"
@@ -78,7 +78,7 @@ jobs:
 
             IMAGE="docker.io/${{ secrets.DOCKER_USERNAME }}/node-app:${PREV_VERSION}"
 
-            curl -X PATCH https://node-app-latest-ou2v.onrender.com/srv-d7irio67r5hc73cdmkag \
+            curl -X PATCH https://node-app-latest-ou2v.onrender.com/services/srv-d7irio67r5hc73cdmkag \
               -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
               -H "Content-Type: application/json" \
               --data "{\"image\":\"$IMAGE\"}"
