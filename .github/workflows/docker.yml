@@ -28,22 +28,13 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }}
           docker push ${{ secrets.DOCKER_USERNAME }}/node-app:latest
 
-      # ✅ Save current running version
-      - name: Save previous version
+      # ✅ ONLY THIS for deploy
+      - name: Trigger Render Deploy
         run: |
-          PREV_VERSION=$(curl -s https://node-app-latest-ou2v.onrender.com/version | awk '{print $3}')
-          echo "PREV_VERSION=$PREV_VERSION" >> $GITHUB_ENV
-          echo "Previous version: $PREV_VERSION"
+          echo "Triggering deploy..."
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
 
-      # ✅ Deploy NEW version using Render API
-      - name: Deploy new version
-        run: |
-          curl -X PATCH "https://api.render.com/v1/services/srv-d7irio67r5hc73cdmkag" \
-          -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-          -H "Content-Type: application/json" \
-          -d "{\"image\":\"docker.io/${{ secrets.DOCKER_USERNAME }}/node-app:${{ github.sha }}\"}"
-
-      # ✅ Wait until new version comes live
+      # ✅ Wait for deployment
       - name: Wait for new version
         run: |
           echo "Waiting for new version..."
@@ -64,22 +55,15 @@ jobs:
           echo "New version did NOT come live"
           exit 1
 
-      # ✅ HEALTH CHECK + AUTO ROLLBACK
-      - name: Health Check & Rollback
+      # ✅ Health check
+      - name: Health Check
         run: |
           echo "Checking health..."
 
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://node-app-latest-ou2v.onrender.com/health)
 
           if [ "$STATUS" -ne 200 ]; then
-            echo "Health failed → Rolling back..."
-
-            curl -X PATCH "https://api.render.com/v1/services/srv-d7irio67r5hc73cdmkag" \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"image\":\"docker.io/${{ secrets.DOCKER_USERNAME }}/node-app:${PREV_VERSION}\"}"
-
-            echo "Rollback done to: $PREV_VERSION"
+            echo "Health check failed!"
             exit 1
           else
             echo "App is healthy ✅"
